@@ -405,6 +405,8 @@ def test(model, test_loader, class_weights, class_encoding):
             f.write(f"===================\n")
             f.write(f"Date: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
             f.write(f"Model: {args.model_path}\n\n")
+            f.write(f"Using pretrained weights:{args.use_pretrained_weights}")
+            f.write(f"Trained on {args.epochs} epochs")
             f.write(f"Average Loss: {loss:.4f}\n")
             f.write(f"Mean IoU: {miou:.4f}\n\n")
             f.write("Per-class IoU:\n")
