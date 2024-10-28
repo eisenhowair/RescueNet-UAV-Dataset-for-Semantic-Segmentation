@@ -1,0 +1,3 @@
+tensorboardX
+timm==1.0.9
+einops
