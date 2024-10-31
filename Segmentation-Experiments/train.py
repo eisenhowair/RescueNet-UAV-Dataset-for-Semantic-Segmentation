@@ -102,6 +102,7 @@ def main_worker(gpu, ngpus_per_node, argss):
     print(args)
 
     BatchNorm = nn.BatchNorm2d
+    params_list = []
 
     criterion = nn.CrossEntropyLoss(ignore_index=args.ignore_label)
     if args.arch == "pspnet":
@@ -154,13 +155,16 @@ def main_worker(gpu, ngpus_per_node, argss):
         model = AttU_Net(img_ch=3, output_ch=args.classes)
     elif args.arch == "transformer":
         model = create_segmenter(args)
+        params_list.append(dict(params=model.parameters(), lr=args.base_lr))
+        args.index_split = 0
 
-    params_list = []
-    for module in modules_ori:
-        params_list.append(dict(params=module.parameters(), lr=args.base_lr))
-    for module in modules_new:
-        params_list.append(dict(params=module.parameters(), lr=args.base_lr * 10))
-    args.index_split = 5
+    if args.arch != "transformer":
+        for module in modules_ori:
+            params_list.append(dict(params=module.parameters(), lr=args.base_lr))
+        for module in modules_new:
+            params_list.append(dict(params=module.parameters(), lr=args.base_lr * 10))
+        args.index_split = 5
+
     optimizer = torch.optim.SGD(
         params_list,
         lr=args.base_lr,

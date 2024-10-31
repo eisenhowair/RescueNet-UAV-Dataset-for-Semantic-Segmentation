@@ -51,6 +51,9 @@ class VisionTransformer(nn.Module):
         channels=3,
     ):
         super().__init__()
+        print(f"image_size\t/\tpatch_size\n")
+        print(f"{image_size}\t/\t{patch_size}\n")
+
         self.patch_embed = PatchEmbedding(
             image_size,
             patch_size,
