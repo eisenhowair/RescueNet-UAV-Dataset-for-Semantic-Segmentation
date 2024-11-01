@@ -372,7 +372,9 @@ def test(model, test_loader, class_weights, class_encoding):
 
     if args.mode.lower() == "test":
         # Create results directory if it doesn't exist
-        results_dir = os.path.join(args.save_folder, "numeric_results")
+        results_dir = os.path.join(
+            args.save_folder, "numeric_results/" + str(args.arch)
+        )
         os.makedirs(results_dir, exist_ok=True)
 
         # Test the trained model
@@ -392,7 +394,7 @@ def test(model, test_loader, class_weights, class_encoding):
             results["class_iou"][key] = float(class_iou)
 
         # Save numeric results to files
-        timestamp = time.strftime("%Hh%M%S_%d%m%Y")
+        timestamp = time.strftime("%Hh%Mm%Ss_%d/%m/%Y")
 
         # Save detailed results in JSON format
         import json
@@ -410,6 +412,8 @@ def test(model, test_loader, class_weights, class_encoding):
             f.write(f"Model: {args.model_path}\n\n")
             f.write(f"Using pretrained weights:{args.use_pretrained_weights}\n")
             f.write(f"Trained on {args.epochs} epochs\n")
+            f.write(f"Batch size: {args.batch_size}\n")
+            f.write(f"With {args.base_lr} as base learning rate\n")
             f.write(f"Using {args.arch} architecture\n\n")
             f.write(f"Average Loss: {loss:.4f}\n")
             f.write(f"Mean IoU: {miou:.4f}\n\n")
@@ -474,7 +478,7 @@ def test(model, test_loader, class_weights, class_encoding):
 """
 
 
-def predict_alt_claude(model, images, paths, class_encoding):
+def predict(model, images, paths, class_encoding):
     """
     Make predictions on a batch of images and save the results
 
@@ -540,7 +544,7 @@ def predict_alt_claude(model, images, paths, class_encoding):
                 io.imsave(outname_final, predict_np)
 
 
-def predict(model, images, paths, class_encoding):
+def predict_old(model, images, paths, class_encoding):
     if not os.path.exists("outputs"):
         os.makedirs("outputs")
     images = images.to(device)
