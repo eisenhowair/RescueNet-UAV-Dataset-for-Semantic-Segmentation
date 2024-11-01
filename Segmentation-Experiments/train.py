@@ -1,3 +1,4 @@
+# train.py
 import os
 import logging
 import numpy as np
@@ -386,9 +387,17 @@ def train(train_loader, model, optimizer, epoch):
 
         input = input.cuda(non_blocking=True).float()
         target = target.cuda(non_blocking=True)
-        output, main_loss, aux_loss = model(input, target)
-        if not args.multiprocessing_distributed:
-            main_loss, aux_loss = torch.mean(main_loss), torch.mean(aux_loss)
+        if args.arch == "transformer":
+            output = model(input)
+            main_loss = F.cross_entropy(output, target, ignore_index=255)
+            aux_loss = torch.tensor(
+                0.0
+            ).cuda()  # pas de perte auxiliaire pour le transformer
+        else:  # pour pspnet et le reste
+            output, main_loss, aux_loss = model(input, target)
+            if not args.multiprocessing_distributed:
+                main_loss, aux_loss = torch.mean(main_loss), torch.mean(aux_loss)
+
         loss = main_loss + args.aux_weight * aux_loss
 
         optimizer.zero_grad()
@@ -408,6 +417,9 @@ def train(train_loader, model, optimizer, epoch):
             ), dist.all_reduce(count)
             n = count.item()
             main_loss, aux_loss, loss = main_loss / n, aux_loss / n, loss / n
+
+        if args.arch == "transformer":
+            output = output.max(1)[1]  # [B, H, W]
 
         intersection, union, target = intersectionAndUnionGPU(
             output, target, args.classes, args.ignore_label
@@ -588,6 +600,7 @@ def validate(val_loader, model, criterion):
     return loss_meter.avg, mIoU, mAcc, allAcc
 
 
+"""
 def test(model, test_loader, class_weights, class_encoding):
     print("\nTesting...\n")
 
@@ -644,7 +657,7 @@ def predict(model, images, class_encoding):
     color_predictions = utils.batch_transform(predictions.cpu(), label_to_rgb)
     utils.imshow_batch(images.data.cpu(), color_predictions)
 
-
+"""
 # Run only if this module is being run directly
 if __name__ == "__main__":
     main()
