@@ -24,6 +24,7 @@ TRAIN:
 
 
   layers: 152
+  class_weights: True
   use_pretrained_weights: True # to indicate whether the model will use pre-trained weights or not
   dataset: rescuenet # @sh : new param
   sync_bn: True  # adopt syncbn or not
@@ -78,7 +79,7 @@ TEST:
   index_step: 0  # evaluation step index in list, 0 means to end
   test_gpu: [0]
   model_path: "exp/RescueNet/pspnet152/model/train_epoch_10.pth" # evaluation model path
-  save_folder: "results_saved/" # results save folder
+  save_folder: "results_saved" # results save folder
   imshow_batch: False # [True, False], True=for visual result, False=for numeric result
   device: cuda
   ignore_unlabeled: True

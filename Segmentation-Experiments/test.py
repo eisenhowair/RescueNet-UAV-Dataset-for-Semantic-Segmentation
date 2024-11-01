@@ -372,9 +372,8 @@ def test(model, test_loader, class_weights, class_encoding):
 
     if args.mode.lower() == "test":
         # Create results directory if it doesn't exist
-        results_dir = os.path.join(
-            args.save_folder, "numeric_results/" + str(args.arch)
-        )
+        results_dir = os.path.join(args.save_folder, "numeric_results", args.arch)
+
         os.makedirs(results_dir, exist_ok=True)
 
         # Test the trained model
@@ -394,7 +393,7 @@ def test(model, test_loader, class_weights, class_encoding):
             results["class_iou"][key] = float(class_iou)
 
         # Save numeric results to files
-        timestamp = time.strftime("%Hh%Mm%Ss_%d/%m/%Y")
+        timestamp = time.strftime("%Hh%Mm%Ss_%d_%m_%Y")
 
         # Save detailed results in JSON format
         import json
@@ -413,6 +412,7 @@ def test(model, test_loader, class_weights, class_encoding):
             f.write(f"Using pretrained weights:{args.use_pretrained_weights}\n")
             f.write(f"Trained on {args.epochs} epochs\n")
             f.write(f"Batch size: {args.batch_size}\n")
+            f.write(f"Class weights activated: {args.class_weights}\n")
             f.write(f"With {args.base_lr} as base learning rate\n")
             f.write(f"Using {args.arch} architecture\n\n")
             f.write(f"Average Loss: {loss:.4f}\n")
@@ -577,4 +577,7 @@ def predict_old(model, images, paths, class_encoding):
 
 
 if __name__ == "__main__":
+    args = get_parser()
+    results_dir = os.path.join(args.save_folder, "numeric_results", args.arch)
+    print(results_dir)
     main()
