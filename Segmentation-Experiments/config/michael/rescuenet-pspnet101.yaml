@@ -5,12 +5,30 @@ DATA:
   classes: 11
 
 TRAIN:
-  arch: pspnet
+  arch: pspnet #transformer #pspnet
+
+
+  backbone: vit_base  # Ajout nécessaire pour le Transformer
+  normalization: batch_norm  # ou layer_norm selon votre besoin
+  d_model: 768  # Dimension du modèle
+  patch_size: 16  # Taille des patches
+  encoder_n_layers: 12  # Nombre de couches de l'encodeur
+  n_heads: 12  # Nombre de têtes d'attention
+  # Paramètres du décodeur (MaskTransformer)
+  decoder_name: mask_transformer
+  decoder_n_layers: 6
+  decoder_d_model: 256  # dimension du décodeur
+  decoder_n_heads: 8
+  drop_path_rate: 0.1
+  dropout: 0.1
+
+
   layers: 152
+  class_weights: True
   use_pretrained_weights: True # to indicate whether the model will use pre-trained weights or not
   dataset: rescuenet # @sh : new param
   sync_bn: True  # adopt syncbn or not
-  train_h: 281 #241 #713 #1024 
+  train_h: 281 #241 #713 #1024 doit être divisble par patch_size pour transformr
   train_w: 281 #241 #713 #1024 #713
   scale_min: 0.5  # minimum random scale
   scale_max: 2.0  # maximum random scale
@@ -21,9 +39,9 @@ TRAIN:
   aux_weight: 0.4
   train_gpu: [0]
   workers: 8  # data loader workers
-  batch_size: 2  # batch size for training
-  batch_size_val: 1  # batch size for validation during training, memory and speed tradeoff
-  base_lr: 0.001
+  batch_size: 2  # batch size for training (2 by default) 8 met 4h par epoch 
+  batch_size_val: 2  # batch size for validation during training, memory and speed tradeoff
+  base_lr: 0.0005
   epochs: 10
   start_epoch: 0
   power: 0.9
@@ -61,7 +79,7 @@ TEST:
   index_step: 0  # evaluation step index in list, 0 means to end
   test_gpu: [0]
   model_path: "exp/RescueNet/pspnet152/model/train_epoch_10.pth" # evaluation model path
-  save_folder: "results_saved/" # results save folder
+  save_folder: "results_saved" # results save folder
   imshow_batch: False # [True, False], True=for visual result, False=for numeric result
   device: cuda
   ignore_unlabeled: True

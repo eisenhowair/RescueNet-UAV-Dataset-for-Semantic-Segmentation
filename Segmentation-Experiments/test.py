@@ -1,3 +1,4 @@
+# test.py
 import os
 import time
 import logging
@@ -118,6 +119,8 @@ def check(args):
                         <= 2 * ((args.train_h - 1) // (8 * args.shrink_factor) + 1) - 1
                     )
                 )
+    elif args.arch == "transformer":
+        print(f"{args.arch} utilisé")
     else:
         raise Exception("architecture not supported yet".format(args.arch))
 
@@ -369,7 +372,8 @@ def test(model, test_loader, class_weights, class_encoding):
 
     if args.mode.lower() == "test":
         # Create results directory if it doesn't exist
-        results_dir = os.path.join(args.save_folder, "numeric_results")
+        results_dir = os.path.join(args.save_folder, "numeric_results", args.arch)
+
         os.makedirs(results_dir, exist_ok=True)
 
         # Test the trained model
@@ -389,7 +393,7 @@ def test(model, test_loader, class_weights, class_encoding):
             results["class_iou"][key] = float(class_iou)
 
         # Save numeric results to files
-        timestamp = time.strftime("%Y%m%d_%H%M%S")
+        timestamp = time.strftime("%Hh%Mm%Ss_%d_%m_%Y")
 
         # Save detailed results in JSON format
         import json
@@ -405,8 +409,12 @@ def test(model, test_loader, class_weights, class_encoding):
             f.write(f"===================\n")
             f.write(f"Date: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
             f.write(f"Model: {args.model_path}\n\n")
-            f.write(f"Using pretrained weights:{args.use_pretrained_weights}")
-            f.write(f"Trained on {args.epochs} epochs")
+            f.write(f"Using pretrained weights:{args.use_pretrained_weights}\n")
+            f.write(f"Trained on {args.epochs} epochs\n")
+            f.write(f"Batch size: {args.batch_size}\n")
+            f.write(f"Class weights activated: {args.class_weights}\n")
+            f.write(f"With {args.base_lr} as base learning rate\n")
+            f.write(f"Using {args.arch} architecture\n\n")
             f.write(f"Average Loss: {loss:.4f}\n")
             f.write(f"Mean IoU: {miou:.4f}\n\n")
             f.write("Per-class IoU:\n")
@@ -471,6 +479,72 @@ def test(model, test_loader, class_weights, class_encoding):
 
 
 def predict(model, images, paths, class_encoding):
+    """
+    Make predictions on a batch of images and save the results
+
+    Args:
+        model: The trained model
+        images: Batch of images to predict on
+        paths: Paths to save the prediction results
+        class_encoding: Dictionary mapping class labels to RGB values
+    """
+    if not os.path.exists("outputs"):
+        os.makedirs("outputs")
+
+    # Ensure model is in eval mode
+    model.eval()
+
+    # Move images to GPU if available
+    images = images.cuda()
+
+    with torch.no_grad():
+        # Forward pass
+        if args.arch == "transformer":
+            # Direct prediction for transformer models
+            predictions = model(images)
+        else:
+            # Original prediction path for other architectures
+            predictions = model(images)
+
+            # Handle auxiliary outputs if present
+            if isinstance(predictions, tuple):
+                predictions = predictions[0]
+
+        # Get class predictions
+        _, predictions = torch.max(predictions.data, 1)
+
+        # Setup color transformation if needed
+        if args.predict_color:
+            label_to_rgb = transforms.Compose(
+                [
+                    ext_transforms.LongTensorToRGBPIL(class_encoding),
+                    transforms.ToTensor(),
+                ]
+            )
+
+            # Transform predictions to RGB
+            predictions = utils.batch_transform(predictions.cpu(), label_to_rgb)
+
+        # Save predictions
+        for predict, impath in zip(predictions, paths):
+            # Create output filename
+            outname = os.path.splitext(impath)[0] + ".png"
+            outname_final = os.path.join(args.output, outname)
+
+            # Create output directory if it doesn't exist
+            os.makedirs(os.path.dirname(outname_final), exist_ok=True)
+
+            if args.predict_color:
+                save_image(predict, outname_final)
+            else:
+                # For grayscale predictions, ensure proper format
+                predict_np = predict.cpu().numpy()
+                if len(predict_np.shape) > 2:
+                    predict_np = predict_np.squeeze()
+                io.imsave(outname_final, predict_np)
+
+
+def predict_old(model, images, paths, class_encoding):
     if not os.path.exists("outputs"):
         os.makedirs("outputs")
     images = images.to(device)
@@ -503,4 +577,7 @@ def predict(model, images, paths, class_encoding):
 
 
 if __name__ == "__main__":
+    args = get_parser()
+    results_dir = os.path.join(args.save_folder, "numeric_results", args.arch)
+    print(results_dir)
     main()

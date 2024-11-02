@@ -1,3 +1,4 @@
+# train.py
 import os
 import logging
 import numpy as np
@@ -20,6 +21,7 @@ import transforms as ext_transforms
 from tensorboardX import SummaryWriter
 from util import transform, config
 from util.util import AverageMeter, poly_learning_rate, intersectionAndUnionGPU
+from data.rescuenet import RescueNet as dataset
 
 ## to implement Transformer
 from models.factory import create_segmenter
@@ -57,6 +59,31 @@ def get_logger():
     handler.setFormatter(logging.Formatter(fmt))
     logger.addHandler(handler)
     return logger
+
+
+def calculate_class_weights(train_loader, num_classes):
+    """
+    Calculate class weights based on class frequencies in the dataset
+    """
+    class_counts = torch.zeros(num_classes)
+    print("Calculating class weights...")
+    for _, target in train_loader:
+        for c in range(num_classes):
+            class_counts[c] += (target == c).sum()
+
+    # Prevent division by zero
+    class_counts = torch.where(
+        class_counts > 0, class_counts, torch.ones_like(class_counts)
+    )
+
+    # Calculate weights using inverse frequency
+    weights = 1.0 / class_counts
+    weights = weights / weights.sum() * num_classes
+
+    # Optional: Normalize weights to sum to 1
+    weights = weights / weights.sum()
+
+    return weights.cuda()
 
 
 def main_process():
@@ -98,12 +125,54 @@ def main_worker(gpu, ngpus_per_node, argss):
     val_loss = []
     val_accuracy = []
     global args
+    global logger, writer
+
     args = argss
-    print(args)
+    # print(args)
 
     BatchNorm = nn.BatchNorm2d
+    params_list = []
 
-    criterion = nn.CrossEntropyLoss(ignore_index=args.ignore_label)
+    image_transform = transforms.Compose(
+        [
+            transforms.Resize((args.train_h, args.train_w), Image.NEAREST),
+            transforms.ToTensor(),
+        ]
+    )
+
+    label_transform = transforms.Compose(
+        [
+            transforms.Resize((args.train_h, args.train_w), Image.NEAREST),
+            ext_transforms.PILToLongTensor(),
+        ]
+    )
+    print(
+        f"Image de dimension {args.train_h} pour height et {args.train_w} pour width "
+    )
+    train_data = dataset(
+        args.data_root, transform=image_transform, label_transform=label_transform
+    )
+    train_loader = torch.utils.data.DataLoader(
+        train_data,
+        batch_size=args.batch_size,
+        shuffle=True,
+        num_workers=args.workers,
+        drop_last=True,
+    )
+
+    if args.class_weights:
+        class_weights = calculate_class_weights(train_loader, args.classes)
+        if main_process():
+            logger = get_logger()
+            logger.info(f"Class weights: {class_weights}")
+
+        # Initialize criterion with class weights
+        criterion = nn.CrossEntropyLoss(
+            weight=class_weights, ignore_index=args.ignore_label
+        )
+    else:
+        criterion = nn.CrossEntropyLoss(ignore_index=args.ignore_label)
+
     if args.arch == "pspnet":
         from models.pspnet_for_train import PSPNet
 
@@ -154,13 +223,16 @@ def main_worker(gpu, ngpus_per_node, argss):
         model = AttU_Net(img_ch=3, output_ch=args.classes)
     elif args.arch == "transformer":
         model = create_segmenter(args)
+        params_list.append(dict(params=model.parameters(), lr=args.base_lr))
+        args.index_split = 0
 
-    params_list = []
-    for module in modules_ori:
-        params_list.append(dict(params=module.parameters(), lr=args.base_lr))
-    for module in modules_new:
-        params_list.append(dict(params=module.parameters(), lr=args.base_lr * 10))
-    args.index_split = 5
+    if args.arch != "transformer":
+        for module in modules_ori:
+            params_list.append(dict(params=module.parameters(), lr=args.base_lr))
+        for module in modules_new:
+            params_list.append(dict(params=module.parameters(), lr=args.base_lr * 10))
+        args.index_split = 5
+
     optimizer = torch.optim.SGD(
         params_list,
         lr=args.base_lr,
@@ -171,8 +243,7 @@ def main_worker(gpu, ngpus_per_node, argss):
         args.save_path + str(args.layers) + "/model"
     )  # essai pour avoir des dossier dynamiques
     if main_process():
-        global logger, writer
-        logger = get_logger()
+        # logger = get_logger()
         writer = SummaryWriter(args.save_path)
         logger.info(args)
         logger.info("=> creating model ...")
@@ -224,37 +295,11 @@ def main_worker(gpu, ngpus_per_node, argss):
 
     # Import the requested dataset
     if args.dataset.lower() == "rescuenet":
-        from data.rescuenet import RescueNet as dataset
+        # il y avait juste l'import de dataset ici dans le if
+        print("jajaja")
     else:
         # Should never happen...but just in case it does
         raise RuntimeError('"{0}" is not a supported dataset.'.format(args.dataset))
-
-    image_transform = transforms.Compose(
-        [
-            transforms.Resize((args.train_h, args.train_w), Image.NEAREST),
-            transforms.ToTensor(),
-        ]
-    )
-
-    label_transform = transforms.Compose(
-        [
-            transforms.Resize((args.train_h, args.train_w), Image.NEAREST),
-            ext_transforms.PILToLongTensor(),
-        ]
-    )
-    print(
-        f"image de dimension {args.train_h} pour height et {args.train_w} pour width "
-    )
-    train_data = dataset(
-        args.data_root, transform=image_transform, label_transform=label_transform
-    )
-    train_loader = torch.utils.data.DataLoader(
-        train_data,
-        batch_size=args.batch_size,
-        shuffle=True,
-        num_workers=args.workers,
-        drop_last=True,
-    )
 
     if args.evaluate:
         label_transform = transforms.Compose(
@@ -382,9 +427,17 @@ def train(train_loader, model, optimizer, epoch):
 
         input = input.cuda(non_blocking=True).float()
         target = target.cuda(non_blocking=True)
-        output, main_loss, aux_loss = model(input, target)
-        if not args.multiprocessing_distributed:
-            main_loss, aux_loss = torch.mean(main_loss), torch.mean(aux_loss)
+        if args.arch == "transformer":
+            output = model(input)
+            main_loss = F.cross_entropy(output, target, ignore_index=255)
+            aux_loss = torch.tensor(
+                0.0
+            ).cuda()  # pas de perte auxiliaire pour le transformer
+        else:  # pour pspnet et le reste
+            output, main_loss, aux_loss = model(input, target)
+            if not args.multiprocessing_distributed:
+                main_loss, aux_loss = torch.mean(main_loss), torch.mean(aux_loss)
+
         loss = main_loss + args.aux_weight * aux_loss
 
         optimizer.zero_grad()
@@ -404,6 +457,9 @@ def train(train_loader, model, optimizer, epoch):
             ), dist.all_reduce(count)
             n = count.item()
             main_loss, aux_loss, loss = main_loss / n, aux_loss / n, loss / n
+
+        if args.arch == "transformer":
+            output = output.max(1)[1]  # [B, H, W]
 
         intersection, union, target = intersectionAndUnionGPU(
             output, target, args.classes, args.ignore_label
@@ -584,6 +640,7 @@ def validate(val_loader, model, criterion):
     return loss_meter.avg, mIoU, mAcc, allAcc
 
 
+"""
 def test(model, test_loader, class_weights, class_encoding):
     print("\nTesting...\n")
 
@@ -640,7 +697,7 @@ def predict(model, images, class_encoding):
     color_predictions = utils.batch_transform(predictions.cpu(), label_to_rgb)
     utils.imshow_batch(images.data.cpu(), color_predictions)
 
-
+"""
 # Run only if this module is being run directly
 if __name__ == "__main__":
     main()
