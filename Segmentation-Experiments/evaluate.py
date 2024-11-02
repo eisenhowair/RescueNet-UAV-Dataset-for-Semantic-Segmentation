@@ -1,4 +1,5 @@
 import torch
+from tqdm import tqdm
 
 
 class Test:
@@ -36,7 +37,9 @@ class Test:
         self.model.eval()
         epoch_loss = 0.0
         self.metric.reset()
-        for step, batch_data in enumerate(self.data_loader):
+        for step, batch_data in tqdm(
+            enumerate(self.data_loader), total=len(self.data_loader), desc="Evaluation"
+        ):
             # Get the inputs and labels
             inputs = batch_data[0].to(self.device)
             labels = batch_data[1].to(self.device)
@@ -53,8 +56,5 @@ class Test:
 
             # Keep track of evaluation the metric
             self.metric.add(outputs.detach(), labels.detach())
-
-            if iteration_loss:
-                print("[Step: %d] Iteration loss: %.4f" % (step, loss.item()))
 
         return epoch_loss / len(self.data_loader), self.metric.value()

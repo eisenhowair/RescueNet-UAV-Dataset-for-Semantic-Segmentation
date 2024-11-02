@@ -332,7 +332,6 @@ def main_worker(gpu, ngpus_per_node, argss):
         train_epochs.append(epoch)
         train_loss.append(loss_train)
         train_accuracy.append(mIoU_train)
-        logger.info("avant main_process")
         if main_process():
             writer.add_scalar("loss_train", loss_train, epoch_log)
             writer.add_scalar("mIoU_train", mIoU_train, epoch_log)
@@ -407,7 +406,10 @@ def train(train_loader, model, optimizer, epoch):
     model.train()
     end = time.time()
     max_iter = args.epochs * len(train_loader)
-    for i, (input, target) in enumerate(train_loader):
+    for i, (input, target) in tqdm(
+        enumerate(train_loader), total=len(train_loader), desc="Training"
+    ):
+        # for i, (input, target) in enumerate(train_loader):
         # print("dans la boucle for de train(), itération ",i)
         data_time.update(time.time() - end)
         if args.zoom_factor != 8:
