@@ -25,7 +25,7 @@ TRAIN:
 
   layers: 101
   class_weights: True
-  use_pretrained_weights: True # to indicate whether the model will use pre-trained weights or not
+  use_pretrained_weights: False # to indicate whether the model will use pre-trained weights or not
   dataset: rescuenet # @sh : new param
   sync_bn: True  # adopt syncbn or not
   train_h: 281 #241 #713 #1024 doit être divisble par patch_size pour transformr

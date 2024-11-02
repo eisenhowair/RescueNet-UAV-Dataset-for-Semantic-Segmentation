@@ -407,7 +407,7 @@ def train(train_loader, model, optimizer, epoch):
     end = time.time()
     max_iter = args.epochs * len(train_loader)
     for i, (input, target) in tqdm(
-        enumerate(train_loader), total=len(train_loader), desc="Training"
+        enumerate(train_loader), total=len(train_loader), desc=f"Epoch {epoch+1}"
     ):
         # for i, (input, target) in enumerate(train_loader):
         # print("dans la boucle for de train(), itération ",i)
