@@ -1,6 +1,7 @@
 import os
 from PIL import Image
 import numpy as np
+import torch
 
 
 def get_files(folder, name_filter=None, extension_filter=None):
@@ -16,7 +17,7 @@ def get_files(folder, name_filter=None, extension_filter=None):
 
     """
     if not os.path.isdir(folder):
-        raise RuntimeError("\"{0}\" is not a folder.".format(folder))
+        raise RuntimeError('"{0}" is not a folder.'.format(folder))
 
     # Filename filter: if not specified don't filter (condition always true);
     # otherwise, use a lambda expression to filter out files that do not
@@ -68,11 +69,13 @@ def pil_loader(data_path, label_path):
 
 def remap(image, old_values, new_values):
     assert isinstance(image, Image.Image) or isinstance(
-        image, np.ndarray), "image must be of type PIL.Image or numpy.ndarray"
+        image, np.ndarray
+    ), "image must be of type PIL.Image or numpy.ndarray"
     assert type(new_values) is tuple, "new_values must be of type tuple"
     assert type(old_values) is tuple, "old_values must be of type tuple"
     assert len(new_values) == len(
-        old_values), "new_values and old_values must have the same length"
+        old_values
+    ), "new_values and old_values must have the same length"
 
     # If image is a PIL.Image convert it to a numpy array
     if isinstance(image, Image.Image):
@@ -126,7 +129,8 @@ def enet_weighing(dataloader, num_classes, c=1.02):
     propensity_score = class_count / total
     class_weights = 1 / (np.log(c + propensity_score))
 
-    return class_weights
+    # return class_weights -> TypeError: cannot assign 'ndarray' object to buffer 'weight' (torch Tensor or None required)
+    return torch.from_numpy(class_weights)
 
 
 def median_freq_balancing(dataloader, num_classes):

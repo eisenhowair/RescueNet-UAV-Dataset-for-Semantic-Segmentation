@@ -84,5 +84,5 @@ Si un problème par rapport à une variable survient, notamment `args`, d'abord 
 images de taille 401x401, entrainé (a duré 9 heures) sur 10 epochs
 Entrainement essayé sur des images de 713*713, mais une epoch prend plus de 20 heures
 9 minutes par epoch sur des images 241*241
-9 images par epoch sur des images 281*281
+9 minutes par epoch sur des images 281*281
 Sur des images de 561, une epoch prend 20 heures

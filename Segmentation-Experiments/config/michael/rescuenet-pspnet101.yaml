@@ -8,7 +8,7 @@ TRAIN:
   arch: pspnet #transformer #pspnet
 
 
-  backbone: vit_base  # Ajout nécessaire pour le Transformer
+  backbone: vit_base_patch8_224  # Ajout nécessaire pour le Transformer
   normalization: batch_norm  # ou layer_norm selon votre besoin
   d_model: 768  # Dimension du modèle
   patch_size: 16  # Taille des patches
@@ -24,8 +24,9 @@ TRAIN:
 
 
   layers: 101
-  class_weights: True
-  use_pretrained_weights: False # to indicate whether the model will use pre-trained weights or not
+  class_weights: False
+  weight_function: enet
+  use_pretrained_weights: True # to indicate whether the model will use pre-trained weights or not
   dataset: rescuenet # @sh : new param
   sync_bn: True  # adopt syncbn or not
   train_h: 281 #241 #713 #1024 doit être divisble par patch_size pour transformr

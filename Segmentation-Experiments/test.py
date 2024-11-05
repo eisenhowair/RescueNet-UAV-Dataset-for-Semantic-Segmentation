@@ -20,8 +20,9 @@ from util.util import (
     intersectionAndUnionGPU,
     check_makedirs,
     colorize,
-    enet_weighing,
 )  # @sh: add
+
+from data.utils import median_freq_balancing, enet_weighing
 from evaluate import Test
 from metric.iou import IoU
 from skimage import io
@@ -191,7 +192,10 @@ def main():
     print("Computing class weights...")
     print("(this can take a while depending on the dataset size)")
     class_weights = 0
-    class_weights = enet_weighing(train_loader, num_classes)
+    if args.weight_function == "enet":
+        class_weights = enet_weighing(train_loader, num_classes)
+    elif args.weight_function == "median":
+        class_weights = median_freq_balancing(train_loader, num_classes)
 
     if class_weights is not None:
         class_weights = torch.from_numpy(class_weights).float().to(device)
@@ -247,7 +251,7 @@ def main():
                 mask_w=args.mask_w,
                 normalization_factor=args.normalization_factor,
                 psa_softmax=args.psa_softmax,
-                pretrained=False,
+                pretrained=args.use_pretrained_weights,
             )
         elif args.arch == "aunet":
             from models.unet import AttU_Net
