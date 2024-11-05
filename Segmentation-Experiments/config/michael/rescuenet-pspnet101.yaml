@@ -5,7 +5,7 @@ DATA:
   classes: 11
 
 TRAIN:
-  arch: pspnet #transformer #pspnet
+  arch: transformer #transformer #pspnet
 
 
   backbone: vit_base_patch8_224  # Ajout nécessaire pour le Transformer
@@ -24,13 +24,13 @@ TRAIN:
 
 
   layers: 101
-  class_weights: False
+  class_weights: True
   weight_function: enet
   use_pretrained_weights: True # to indicate whether the model will use pre-trained weights or not
   dataset: rescuenet # @sh : new param
   sync_bn: True  # adopt syncbn or not
-  train_h: 281 #241 #713 #1024 doit être divisble par patch_size pour transformr
-  train_w: 281 #241 #713 #1024 #713
+  train_h: 288 #241 #713 #1024 doit être divisble par patch_size pour transformr
+  train_w: 288 #241 #713 #1024 #713
   scale_min: 0.5  # minimum random scale
   scale_max: 2.0  # maximum random scale
   rotate_min: -10  # minimum random rotate
