@@ -25,6 +25,7 @@ from data.rescuenet import RescueNet as dataset
 
 ## to implement Transformer
 from models.factory import create_segmenter
+from data.utils import median_freq_balancing, enet_weighing
 
 
 def get_parser():
@@ -126,6 +127,7 @@ def main_worker(gpu, ngpus_per_node, argss):
     val_accuracy = []
     global args
     global logger, writer
+    logger = get_logger()
 
     args = argss
     # print(args)
@@ -161,9 +163,14 @@ def main_worker(gpu, ngpus_per_node, argss):
     )
 
     if args.class_weights:
-        class_weights = calculate_class_weights(train_loader, args.classes)
+        if args.weight_function == "enet":
+            class_weights = enet_weighing(train_loader, args.classes)
+        elif args.weight_function == "median":
+            class_weights = median_freq_balancing(train_loader, args.classes)
+        else:
+            class_weights = calculate_class_weights(train_loader, args.classes)
+
         if main_process():
-            logger = get_logger()
             logger.info(f"Class weights: {class_weights}")
 
         # Initialize criterion with class weights
@@ -222,7 +229,7 @@ def main_worker(gpu, ngpus_per_node, argss):
 
         model = AttU_Net(img_ch=3, output_ch=args.classes)
     elif args.arch == "transformer":
-        model = create_segmenter(args)
+        model = create_segmenter(args, criterion=criterion)
         params_list.append(dict(params=model.parameters(), lr=args.base_lr))
         args.index_split = 0
 
@@ -248,7 +255,7 @@ def main_worker(gpu, ngpus_per_node, argss):
         logger.info(args)
         logger.info("=> creating model ...")
         logger.info("Classes: {}".format(args.classes))
-        logger.info(model)
+        # logger.info(model)
 
     model = torch.nn.DataParallel(
         model.cuda()
