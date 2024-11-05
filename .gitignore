@@ -1,7 +1,12 @@
-outputs
-initmodel
-exp
-dataset
-__pycache__
-results_saved
-config/michael
+outputs/
+initmodel/
+exp/
+dataset/
+__pycache__/
+results_saved/
+config/michael/
+
+# So the missing folders appear -> PLACEHOLDER.md
+!dataset/**/PLACEHOLDER.md
+!exp/**/PLACEHOLDER.md
+!results_saved/**/PLACEHOLDER.md

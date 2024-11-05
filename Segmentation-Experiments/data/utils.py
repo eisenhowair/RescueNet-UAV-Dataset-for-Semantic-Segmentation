@@ -2,6 +2,7 @@ import os
 from PIL import Image
 import numpy as np
 import torch
+from tqdm import tqdm
 
 
 def get_files(folder, name_filter=None, extension_filter=None):
@@ -114,7 +115,8 @@ def enet_weighing(dataloader, num_classes, c=1.02):
     """
     class_count = 0
     total = 0
-    for _, label in dataloader:
+    for _, label in tqdm(dataloader, desc="Calculating class distribution"):
+
         label = label.cpu().numpy()
 
         # Flatten label

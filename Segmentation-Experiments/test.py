@@ -198,7 +198,7 @@ def main():
         class_weights = median_freq_balancing(train_loader, num_classes)
 
     if class_weights is not None:
-        class_weights = torch.from_numpy(class_weights).float().to(device)
+        class_weights.to(device)
     print("Class weights:", class_weights)
 
     # Load the test set as tensors for visulation
@@ -260,7 +260,7 @@ def main():
         elif args.arch == "transformer":
             model = create_segmenter(args)
 
-        logger.info(model)
+        # logger.info(model)
         model = torch.nn.DataParallel(model).cuda()
         cudnn.benchmark = True
 
@@ -281,11 +281,10 @@ def main():
             logger.info("=> loaded checkpoint '{}'".format(args.model_path))
         else:
             raise RuntimeError("=> no checkpoint found at '{}'".format(args.model_path))
+        # print(model)
         if args.mode.lower() == "test":
-            print(model)
             test(model, test_loader, class_weights, class_encoding)
         elif args.mode.lower() == "vis":
-            print(model)
             test(model, test_loader_vis, class_weights, class_encoding)
 
 
@@ -366,7 +365,7 @@ def test(model, test_loader, class_weights, class_encoding):
     print("\nTesting...\n")
 
     num_classes = len(class_encoding)
-    criterion = nn.CrossEntropyLoss(weight=class_weights)
+    criterion = nn.CrossEntropyLoss(weight=class_weights.to(device))
 
     if args.ignore_unlabeled:
         ignore_index = list(class_encoding).index("unlabeled")
@@ -399,12 +398,14 @@ def test(model, test_loader, class_weights, class_encoding):
         # Save numeric results to files
         timestamp = time.strftime("%Hh%Mm%Ss_%d_%m_%Y")
 
+        """
         # Save detailed results in JSON format
         import json
 
         json_path = os.path.join(results_dir, f"results_{timestamp}.json")
         with open(json_path, "w") as f:
             json.dump(results, f, indent=4)
+        """
 
         # Save summary in text format
         txt_path = os.path.join(results_dir, f"summary_{timestamp}.txt")
@@ -417,6 +418,8 @@ def test(model, test_loader, class_weights, class_encoding):
             f.write(f"Trained on {args.epochs} epochs\n")
             f.write(f"Batch size: {args.batch_size}\n")
             f.write(f"Class weights activated: {args.class_weights}\n")
+            f.write(f"Type of class weights: {args.weight_function}\n")
+
             f.write(f"With {args.base_lr} as base learning rate\n")
             f.write(f"Using {args.arch} architecture\n\n")
             f.write(f"Average Loss: {loss:.4f}\n")
