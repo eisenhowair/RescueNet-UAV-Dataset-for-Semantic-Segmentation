@@ -1,0 +1,1 @@
+test, train and val folders should go here (each containing both <type>-org-img and <type>-label-img folders, with the respective dataset in them)

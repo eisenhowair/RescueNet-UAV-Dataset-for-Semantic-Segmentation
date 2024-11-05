@@ -130,7 +130,7 @@ def enet_weighing(dataloader, num_classes, c=1.02):
     class_weights = 1 / (np.log(c + propensity_score))
 
     # return class_weights -> TypeError: cannot assign 'ndarray' object to buffer 'weight' (torch Tensor or None required)
-    return torch.from_numpy(class_weights)
+    return torch.from_numpy(class_weights).float()
 
 
 def median_freq_balancing(dataloader, num_classes):

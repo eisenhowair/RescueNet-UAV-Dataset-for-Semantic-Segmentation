@@ -1,0 +1,1 @@
+The three results folder should go here (color, gray, and numeric_results)
