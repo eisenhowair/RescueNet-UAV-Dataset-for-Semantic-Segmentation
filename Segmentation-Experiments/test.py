@@ -405,6 +405,7 @@ def test(model, test_loader, class_weights, class_encoding):
         json_path = os.path.join(results_dir, f"results_{timestamp}.json")
         with open(json_path, "w") as f:
             json.dump(results, f, indent=4)
+        print(f"- Detailed results: {json_path}")
         """
 
         # Save summary in text format
@@ -429,7 +430,6 @@ def test(model, test_loader, class_weights, class_encoding):
                 f.write(f"{key}: {value:.4f}\n")
 
         print(f"\nNumeric results saved to:")
-        print(f"- Detailed results: {json_path}")
         print(f"- Summary: {txt_path}")
 
     # Visual results processing

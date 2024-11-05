@@ -86,3 +86,6 @@ Entrainement essayé sur des images de 713*713, mais une epoch prend plus de 20 
 9 minutes par epoch sur des images 241*241
 9 minutes par epoch sur des images 281*281
 Sur des images de 561, une epoch prend 20 heures
+
+Intersection over union (IoU) is known to be a good metric for measuring overlap between two bounding boxes or masks.
+If the prediction is completely correct, IoU = 1. The lower the IoU, the worse the prediction result.

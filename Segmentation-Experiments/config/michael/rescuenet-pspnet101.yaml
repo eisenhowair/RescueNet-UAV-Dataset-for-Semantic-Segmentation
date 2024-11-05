@@ -23,7 +23,7 @@ TRAIN:
   dropout: 0.1
 
 
-  layers: 101
+  layers: 152
   class_weights: True
   weight_function: enet
   use_pretrained_weights: True # to indicate whether the model will use pre-trained weights or not
@@ -79,7 +79,7 @@ TEST:
   index_start: 0  # evaluation start index in list
   index_step: 0  # evaluation step index in list, 0 means to end
   test_gpu: [0]
-  model_path: "exp/RescueNet/pspnet101/model/train_epoch_10.pth" # evaluation model path
+  model_path: "exp/RescueNet/pspnet152/model/train_epoch_10.pth" # evaluation model path
   save_folder: "results_saved" # results save folder
   imshow_batch: False # [True, False], True=for visual result, False=for numeric result
   device: cuda

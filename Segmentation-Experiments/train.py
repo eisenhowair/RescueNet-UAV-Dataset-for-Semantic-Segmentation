@@ -255,7 +255,7 @@ def main_worker(gpu, ngpus_per_node, argss):
         logger.info(args)
         logger.info("=> creating model ...")
         logger.info("Classes: {}".format(args.classes))
-        logger.info(model)
+        # logger.info(model)
 
     model = torch.nn.DataParallel(
         model.cuda()
