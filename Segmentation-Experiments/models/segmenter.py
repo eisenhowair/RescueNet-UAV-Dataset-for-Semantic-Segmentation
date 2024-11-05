@@ -15,7 +15,7 @@ class Segmenter(nn.Module):
     ):
         super().__init__()
         self.n_cls = n_cls
-        self.patch_size = encoder.patch_size
+        self.patch_size = encoder.patch_embed.patch_size[0]
         self.encoder = encoder
         self.decoder = decoder
 
@@ -34,11 +34,13 @@ class Segmenter(nn.Module):
         im = padding(im, self.patch_size)
         H, W = im.size(2), im.size(3)
 
-        x = self.encoder(im, return_features=True)
+        # Obtenir les features de l'encoder
+        x = self.encoder.forward_features(
+            im
+        )  # Utiliser forward_features au lieu de return_features
 
-        # remove CLS/DIST tokens for decoding
-        num_extra_tokens = 1 + self.encoder.distilled
-        x = x[:, num_extra_tokens:]
+        # remove CLS token for decoding
+        x = x[:, 1:]  # On enlève seulement le token CLS (premier token)
 
         masks = self.decoder(x, (H, W))
 
