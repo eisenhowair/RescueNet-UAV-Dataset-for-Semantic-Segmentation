@@ -5,7 +5,6 @@ dataset/
 __pycache__/
 results_saved/
 config/michael/
-
 # So the missing folders appear -> PLACEHOLDER.md
 !dataset/**/PLACEHOLDER.md
 !exp/**/PLACEHOLDER.md
