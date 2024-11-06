@@ -252,7 +252,7 @@ def main_worker(gpu, ngpus_per_node, argss):
     if main_process():
         # logger = get_logger()
         writer = SummaryWriter(args.save_path)
-        logger.info(args)
+        # logger.info(args)
         logger.info("=> creating model ...")
         logger.info("Classes: {}".format(args.classes))
         # logger.info(model)
@@ -301,10 +301,7 @@ def main_worker(gpu, ngpus_per_node, argss):
     std = [item * value_scale for item in std]
 
     # Import the requested dataset
-    if args.dataset.lower() == "rescuenet":
-        # il y avait juste l'import de dataset ici dans le if
-        print("jajaja")
-    else:
+    if args.dataset.lower() != "rescuenet":
         # Should never happen...but just in case it does
         raise RuntimeError('"{0}" is not a supported dataset.'.format(args.dataset))
 
@@ -327,6 +324,7 @@ def main_worker(gpu, ngpus_per_node, argss):
             shuffle=False,
             num_workers=args.workers,
         )
+    print("Model device:", next(model.parameters()).device)
 
     for epoch in tqdm(range(args.start_epoch, args.epochs), desc="Epochs"):
         epoch_log = epoch + 1
@@ -400,7 +398,6 @@ def main_worker(gpu, ngpus_per_node, argss):
 
 
 def train(train_loader, model, optimizer, epoch):
-    print("Model device:", next(model.parameters()).device)
     batch_time = AverageMeter()
     data_time = AverageMeter()
     main_loss_meter = AverageMeter()
