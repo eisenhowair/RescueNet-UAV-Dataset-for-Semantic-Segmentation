@@ -90,11 +90,11 @@ def create_vit(model_cfg):
 """
 
 
-def create_vit(model_cfg, pretrained=False):
+def create_vit(model_cfg):
     # Charger directement le modèle pré-entraîné via timm
     model = timm.create_model(
         model_cfg.backbone,
-        pretrained=pretrained,
+        pretrained=model_cfg.use_pretrained_weights,
         img_size=(model_cfg.train_h, model_cfg.train_w),
         patch_size=model_cfg.patch_size,
         num_heads=model_cfg.n_heads,
@@ -151,13 +151,24 @@ def create_decoder(encoder, decoder_cfg):
 
 
 def create_segmenter(model_cfg, criterion=None):
+
+    assert model_cfg.patch_size in [
+        8,
+        16,
+        32,
+    ], f"patch_size invalide: {model_cfg.patch_size}"
+    assert (
+        model_cfg.d_model % model_cfg.n_heads == 0
+    ), "d_model doit être divisible par n_heads"
+    assert (
+        model_cfg.decoder_d_model % model_cfg.decoder_n_heads == 0
+    ), "decoder_d_model doit être divisible par decoder_n_heads"
     # model_cfg = model_cfg.copy()
     decoder_cfg = model_cfg
     # decoder_cfg["n_cls"] = model_cfg["n_cls"]
 
-    encoder = create_vit(model_cfg, pretrained=model_cfg.use_pretrained_weights)
+    encoder = create_vit(model_cfg)
     decoder = create_decoder(encoder, decoder_cfg)
-    # model = Segmenter(encoder, decoder, n_cls=model_cfg["n_cls"])
     model = Segmenter(encoder, decoder, n_cls=model_cfg.classes)
 
     if criterion is not None:

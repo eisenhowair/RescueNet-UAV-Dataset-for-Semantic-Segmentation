@@ -43,6 +43,7 @@ from models.factory import create_segmenter
 from models.pspnet_for_train import (
     PSPNet,
 )  # Utilisez le même fichier que pour l'entraînement
+
 from models import resnet_for_train
 
 
@@ -422,8 +423,11 @@ def test(model, test_loader, class_weights, class_encoding):
             f.write(f"Type of class weights: {args.weight_function}\n")
 
             f.write(f"With {args.base_lr} as base learning rate\n")
-            f.write(f"Using {args.arch} architecture\n\n")
-            f.write(f"Average Loss: {loss:.4f}\n")
+            f.write(f"Using {args.arch} architecture\n")
+            if args.arch == "transformer":
+                f.write(f"Backbone used: {args.backbone}\n")
+
+            f.write(f"\nAverage Loss: {loss:.4f}\n")
             f.write(f"Mean IoU: {miou:.4f}\n\n")
             f.write("Per-class IoU:\n")
             for key, value in results["class_iou"].items():
