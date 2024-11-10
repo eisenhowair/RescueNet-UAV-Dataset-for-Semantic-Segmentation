@@ -419,6 +419,7 @@ def test(model, test_loader, class_weights, class_encoding):
             f.write(f"Using pretrained weights:{args.use_pretrained_weights}\n")
             f.write(f"Trained on {args.epochs} epochs\n")
             f.write(f"Batch size: {args.batch_size}\n")
+            f.write(f"Optimizer: {args.optimizer}")
             f.write(f"Class weights activated: {args.class_weights}\n")
             f.write(f"Type of class weights: {args.weight_function}\n")
 

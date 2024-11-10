@@ -233,13 +233,6 @@ def main_worker(gpu, ngpus_per_node, argss):
         params_list.append(dict(params=model.parameters(), lr=args.base_lr))
         args.index_split = 0
 
-        optimizer = torch.optim.AdamW(
-            params_list,
-            lr=args.base_lr,
-            weight_decay=args.weight_decay,
-            betas=(0.9, 0.999),  # avec AdamW, pas de momentum -> betas
-        )
-
     if args.arch != "transformer":
         for module in modules_ori:
             params_list.append(dict(params=module.parameters(), lr=args.base_lr))
@@ -247,12 +240,22 @@ def main_worker(gpu, ngpus_per_node, argss):
             params_list.append(dict(params=module.parameters(), lr=args.base_lr * 10))
         args.index_split = 5
 
+    if args.optimizer == "SGD":
         optimizer = torch.optim.SGD(
             params_list,
-            lr=args.base_lr,
+            lr=args.base_lr,  # 0.001 est pas mal
             momentum=args.momentum,
             weight_decay=args.weight_decay,
         )
+    elif args.optimizer == "AdamW":
+        optimizer = torch.optim.AdamW(
+            params_list,
+            lr=args.base_lr,  # 0.00001 avec 0 de weight decay fonctionne bien
+            weight_decay=args.weight_decay,
+            betas=(0.9, 0.999),  # avec AdamW, pas de momentum -> betas
+        )
+    else:
+        raise RuntimeError('"{0}" is not a supported optimizer.'.format(args.optimizer))
 
     args.save_path = (
         args.save_path + str(args.layers) + "/model"
