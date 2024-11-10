@@ -40,7 +40,7 @@ TRAIN:
   aux_weight: 0.4
   train_gpu: [0]
   workers: 8  # data loader workers
-  batch_size: 4  # batch size for training (2 by default) 8 met 4h par epoch 
+  batch_size: 2  # batch size for training (2 by default) 8 met 4h par epoch 
   batch_size_val: 2  # batch size for validation during training, memory and speed tradeoff
   base_lr: 0.000001 # 0.00001 avec 0 de weight decay, fonctionne pour AdamW 0.001 est mieux pour SGD
   optimizer: "AdamW"
