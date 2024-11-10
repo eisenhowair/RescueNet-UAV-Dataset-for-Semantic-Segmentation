@@ -233,6 +233,13 @@ def main_worker(gpu, ngpus_per_node, argss):
         params_list.append(dict(params=model.parameters(), lr=args.base_lr))
         args.index_split = 0
 
+        optimizer = torch.optim.AdamW(
+            params_list,
+            lr=args.base_lr,
+            weight_decay=args.weight_decay,
+            betas=(0.9, 0.999),  # avec AdamW, pas de momentum -> betas
+        )
+
     if args.arch != "transformer":
         for module in modules_ori:
             params_list.append(dict(params=module.parameters(), lr=args.base_lr))
@@ -240,12 +247,13 @@ def main_worker(gpu, ngpus_per_node, argss):
             params_list.append(dict(params=module.parameters(), lr=args.base_lr * 10))
         args.index_split = 5
 
-    optimizer = torch.optim.SGD(
-        params_list,
-        lr=args.base_lr,
-        momentum=args.momentum,
-        weight_decay=args.weight_decay,
-    )
+        optimizer = torch.optim.SGD(
+            params_list,
+            lr=args.base_lr,
+            momentum=args.momentum,
+            weight_decay=args.weight_decay,
+        )
+
     args.save_path = (
         args.save_path + str(args.layers) + "/model"
     )  # essai pour avoir des dossier dynamiques
@@ -363,7 +371,7 @@ def main_worker(gpu, ngpus_per_node, argss):
                 )
                 os.remove(deletename)
         if args.evaluate:
-            print("evaluation epoch ", epoch_log)
+            print("Evaluation epoch ", epoch_log)
             loss_val, mIoU_val, mAcc_val, allAcc_val = validate(
                 val_loader, model, criterion
             )
