@@ -25,8 +25,9 @@ TRAIN:
 
   layers: 152
   class_weights: True
-  weight_function: enet
+  weight_function: median
   use_pretrained_weights: True # to indicate whether the model will use pre-trained weights or not
+  transformation: False # ne fonctionne pas (laisser à False)
   dataset: rescuenet # @sh : new param
   sync_bn: True  # adopt syncbn or not
   train_h: 281 #241 #713 #1024 doit être divisble par patch_size pour transformr
@@ -42,8 +43,10 @@ TRAIN:
   workers: 8  # data loader workers
   batch_size: 2  # batch size for training (2 by default) 8 met 4h par epoch 
   batch_size_val: 2  # batch size for validation during training, memory and speed tradeoff
-  base_lr: 0.000001 # 0.00001 avec 0 de weight decay, fonctionne pour AdamW 0.001 est mieux pour SGD
-  optimizer: "AdamW"
+  base_lr: 0.0005
+  # 0.00001 avec 0 de weight decay pour transformer, fonctionne pour AdamW 0.001 est mieux pour SGD
+  # 0.0005 est mieux pour pspnet
+  optimizer: "SGD"
   epochs: 10
   start_epoch: 0
   power: 0.9 # sert uniquement pour le poly learning rate dans util.py

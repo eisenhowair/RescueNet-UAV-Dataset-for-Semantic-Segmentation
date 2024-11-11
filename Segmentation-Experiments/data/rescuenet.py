@@ -9,11 +9,15 @@ import os
 from collections import OrderedDict
 import torch.utils.data as data
 from . import utils
+import cv2
 
 # @ sh:add
 from PIL import Image, ImageOps, ImageFilter
 from torchvision import transforms
 import numpy as np
+import torch
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
 
 
 class RescueNet(data.Dataset):
@@ -79,6 +83,8 @@ class RescueNet(data.Dataset):
         mode="train",
         transform=None,
         label_transform=None,
+        albumentations_transform=None,
+        transfo_activated=False,
         loader=utils.pil_loader,
     ):
         self.root_dir = root_dir
@@ -89,6 +95,7 @@ class RescueNet(data.Dataset):
         self.mean = [0.485, 0.456, 0.406]
         self.std = [0.229, 0.224, 0.225]
         self.normalize = transforms.Normalize(self.mean, self.std)
+        self.transfo_activated = transfo_activated
 
         if self.mode.lower() == "train":
             # Get the training data and labels filepaths
@@ -143,6 +150,30 @@ class RescueNet(data.Dataset):
                 "Unexpected dataset mode. " "Supported modes are: train, val and test"
             )
 
+        if self.mode.lower() == "train" and self.transfo_activated == True:
+            self.albumentations_transform = A.Compose(
+                [
+                    A.HorizontalFlip(p=0.5),
+                    A.VerticalFlip(p=0.5),
+                    A.RandomRotate90(p=0.5),
+                    A.ShiftScaleRotate(
+                        shift_limit=0.0625, scale_limit=0.2, rotate_limit=10, p=0.5
+                    ),
+                    A.OneOf(
+                        [
+                            A.RandomBrightnessContrast(p=0.5),
+                            A.RandomGamma(p=0.5),
+                            A.CLAHE(p=0.5),
+                        ],
+                        p=0.5,
+                    ),
+                    A.Normalize(mean=self.mean, std=self.std),
+                    ToTensorV2(),
+                ]
+            )
+        else:
+            self.albumentations_transform = None
+
     def _normalize(self, image):
         image = image.astype(np.float32)[:, :, ::-1]
         image = image / 255.0
@@ -169,9 +200,13 @@ class RescueNet(data.Dataset):
 
         if self.mode.lower() == "train":
             data_path, label_path = self.train_data[index], self.train_labels[index]
+
         elif self.mode.lower() == "val":
             data_path, label_path = self.val_data[index], self.val_labels[index]
+            self.albumentations_transform = None
+
         elif self.mode.lower() == "test":
+            self.albumentations_transform = None
             data_path, label_path = self.test_data[index], self.test_labels[index]
         else:
             raise RuntimeError(
@@ -188,6 +223,66 @@ class RescueNet(data.Dataset):
 
         if self.label_transform is not None:
             label = self.label_transform(label)
+
+        if self.albumentations_transform is not None:
+            if isinstance(img, torch.Tensor):
+                # Si `img` est déjà un tenseur, on le garde tel quel
+                img = (
+                    img.permute(2, 0, 1).float()
+                    if img.ndimension() == 3
+                    else img.unsqueeze(0).float()
+                )
+            else:
+                # Si `img` n'est pas un tenseur, on le convertit
+                img = (
+                    torch.from_numpy(img).permute(2, 0, 1).float()
+                    if img.ndimension() == 3
+                    else torch.from_numpy(img).unsqueeze(0).float()
+                )
+
+            if isinstance(label, torch.Tensor):
+                # Si `label` est déjà un tenseur, on le garde tel quel
+                label = (
+                    label.unsqueeze(0).long()
+                    if label.ndimension() == 2
+                    else label.long()
+                )
+            else:
+                # Si `label` n'est pas un tenseur, on le convertit
+                label = (
+                    torch.from_numpy(label).unsqueeze(0).long()
+                    if label.ndimension() == 2
+                    else torch.from_numpy(label).long()
+                )
+
+            # Vérification des dimensions du masque
+            if (
+                img.shape[:2] != label.shape[:2]
+            ):  # Comparaison des dimensions (hauteur, largeur)
+                label = cv2.resize(
+                    label, (img.shape[1], img.shape[0]), interpolation=cv2.INTER_NEAREST
+                )
+
+            augmented = self.albumentations_transform(image=img, mask=label)
+            img = augmented["image"]
+            label = augmented["mask"]
+
+            # Réorganisation des canaux si nécessaire
+            if len(img.shape) == 3:  # Vérifie que c'est (H, W, C)
+                img = (
+                    torch.from_numpy(img).permute(2, 0, 1).float()
+                )  # Convertit en (C, H, W)
+            else:
+                img = (
+                    torch.from_numpy(img).unsqueeze(0).float()
+                )  # Si c'est grayscale (H, W) -> (1, H, W)
+
+            if len(label.shape) == 2:  # Masque de dimension (H, W)
+                label = (
+                    torch.from_numpy(label).unsqueeze(0).long()
+                )  # Convertit en (1, H, W)
+            else:
+                label = torch.from_numpy(label).long()  # Si déjà (1, H, W)
 
         return self.normalize(img), label
 

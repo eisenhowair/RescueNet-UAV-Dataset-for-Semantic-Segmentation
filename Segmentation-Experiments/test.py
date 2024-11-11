@@ -197,6 +197,7 @@ def main():
         class_weights = enet_weighing(train_loader, num_classes)
     elif args.weight_function == "median":
         class_weights = median_freq_balancing(train_loader, num_classes)
+        #  tensor([ 0.0817,  0.3042,  1.0811,  1.0000,  1.1928,  1.1088,  7.9330,  0.4916, 0.7801,  0.1408, 10.6358])
 
     if class_weights is not None:
         class_weights.to(device)
@@ -427,6 +428,8 @@ def test(model, test_loader, class_weights, class_encoding):
             f.write(f"Using {args.arch} architecture\n")
             if args.arch == "transformer":
                 f.write(f"Backbone used: {args.backbone}\n")
+            if args.transformation:
+                f.write("Albumentations used (dataset*2)")
 
             f.write(f"\nAverage Loss: {loss:.4f}\n")
             f.write(f"Mean IoU: {miou:.4f}\n\n")

@@ -22,6 +22,8 @@ from tensorboardX import SummaryWriter
 from util import transform, config
 from util.util import AverageMeter, poly_learning_rate, intersectionAndUnionGPU
 from data.rescuenet import RescueNet as dataset
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
 
 ## to implement Transformer
 from models.factory import create_segmenter
@@ -154,6 +156,17 @@ def main_worker(gpu, ngpus_per_node, argss):
     train_data = dataset(
         args.data_root, transform=image_transform, label_transform=label_transform
     )
+
+    if args.transformation:
+        augmented_dataset = dataset(
+            args.data_root,
+            mode="train",
+            transform=image_transform,
+            label_transform=label_transform,
+            transfo_activated=True,
+        )
+        train_data = torch.utils.data.ConcatDataset([train_data, augmented_dataset])
+
     train_loader = torch.utils.data.DataLoader(
         train_data,
         batch_size=args.batch_size,
@@ -167,6 +180,8 @@ def main_worker(gpu, ngpus_per_node, argss):
             class_weights = enet_weighing(train_loader, args.classes)
         elif args.weight_function == "median":
             class_weights = median_freq_balancing(train_loader, args.classes)
+            #  tensor([ 0.0817,  0.3042,  1.0811,  1.0000,  1.1928,  1.1088,  7.9330,  0.4916, 0.7801,  0.1408, 10.6358])
+
         else:
             class_weights = calculate_class_weights(train_loader, args.classes)
 

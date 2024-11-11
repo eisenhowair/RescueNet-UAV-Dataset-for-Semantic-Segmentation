@@ -154,7 +154,7 @@ def median_freq_balancing(dataloader, num_classes):
     """
     class_count = 0
     total = 0
-    for _, label in dataloader:
+    for _, label in tqdm(dataloader, desc="Calculating class distribution"):
         label = label.cpu().numpy()
 
         # Flatten label
@@ -177,5 +177,6 @@ def median_freq_balancing(dataloader, num_classes):
     # Compute the frequency and its median
     freq = class_count / total
     med = np.median(freq)
+    class_weights = med / freq
 
-    return med / freq
+    return torch.from_numpy(class_weights).float()
