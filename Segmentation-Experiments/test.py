@@ -26,6 +26,7 @@ from data.utils import median_freq_balancing, enet_weighing
 from evaluate import Test
 from metric.iou import IoU
 from skimage import io
+from tqdm import tqdm
 
 cv2.ocl.setUseOpenCL(False)
 
@@ -35,6 +36,8 @@ import transforms as ext_transforms
 import torch.nn as nn
 import utils
 from torchvision.utils import save_image
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
 
 ## to implement Transformer
 from models.factory import create_segmenter
@@ -156,20 +159,22 @@ def main():
         # Should never happen...but just in case it does
         raise RuntimeError('"{0}" is not a supported dataset.'.format(args.dataset))
 
-    image_transform = transforms.Compose(
-        [transforms.Resize((args.train_h, args.train_w)), transforms.ToTensor()]
-    )
-
-    label_transform = transforms.Compose(
+    test_transforms = A.Compose(
         [
-            transforms.Resize((args.train_h, args.train_w), Image.NEAREST),
-            ext_transforms.PILToLongTensor(),
-        ]
+            A.Resize(height=args.train_h, width=args.train_w),
+            A.Normalize(
+                mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+            ),  # Si nécessaire
+            ToTensorV2(),
+        ],
+        additional_targets={"mask": "mask"},
     )
 
     train_set = dataset(
-        args.data_root, transform=image_transform, label_transform=label_transform
+        args.data_root,
+        transforms=test_transforms,
     )
+
     train_loader = torch.utils.data.DataLoader(
         train_set,
         batch_size=args.batch_size,
@@ -204,20 +209,13 @@ def main():
     print("Class weights:", class_weights)
 
     # Load the test set as tensors for visulation
-    test_set_vis = dataset(
-        args.data_root,
-        mode="vis",
-        transform=image_transform,
-        label_transform=label_transform,
-    )
+    test_set_vis = dataset(args.data_root, mode="vis", transforms=test_transforms)
 
     test_loader_vis = torch.utils.data.DataLoader(
         test_set_vis, batch_size=1, shuffle=False, num_workers=args.workers
     )
 
-    test_data = dataset(
-        args.data_root, transform=image_transform, label_transform=label_transform
-    )
+    test_data = dataset(args.data_root, transforms=test_transforms)
     test_loader = torch.utils.data.DataLoader(
         test_data,
         batch_size=1,
@@ -429,7 +427,7 @@ def test(model, test_loader, class_weights, class_encoding):
             if args.arch == "transformer":
                 f.write(f"Backbone used: {args.backbone}\n")
             if args.transformation:
-                f.write("Albumentations used (dataset*2)")
+                f.write("Albumentations used (dataset*2)\n")
 
             f.write(f"\nAverage Loss: {loss:.4f}\n")
             f.write(f"Mean IoU: {miou:.4f}\n\n")
@@ -443,7 +441,11 @@ def test(model, test_loader, class_weights, class_encoding):
     # Visual results processing
     if args.imshow_batch:
         print("Processing and saving visual predictions...")
-        for _, batch_data in enumerate(test_loader):
+        # for _, batch_data in enumerate(test_loader):
+        for _, batch_data in tqdm(
+            enumerate(test_loader), desc="Calculating class distribution"
+        ):
+
             images = batch_data[0]
             paths = batch_data[1]
             predict(model, images, paths, class_encoding)

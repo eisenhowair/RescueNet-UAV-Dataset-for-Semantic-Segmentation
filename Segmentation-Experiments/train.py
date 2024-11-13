@@ -27,6 +27,7 @@ from albumentations.pytorch import ToTensorV2
 
 ## to implement Transformer
 from models.factory import create_segmenter
+
 from data.utils import median_freq_balancing, enet_weighing
 
 
@@ -67,6 +68,7 @@ def get_logger():
 def calculate_class_weights(train_loader, num_classes):
     """
     Calculate class weights based on class frequencies in the dataset
+    Moins bons résultats que median_freq ou enet
     """
     class_counts = torch.zeros(num_classes)
     print("Calculating class weights...")
@@ -137,34 +139,53 @@ def main_worker(gpu, ngpus_per_node, argss):
     BatchNorm = nn.BatchNorm2d
     params_list = []
 
-    image_transform = transforms.Compose(
+    base_transforms = A.Compose(
         [
-            transforms.Resize((args.train_h, args.train_w), Image.NEAREST),
-            transforms.ToTensor(),
-        ]
+            A.Resize(height=args.train_h, width=args.train_w),
+            A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            ToTensorV2(),
+        ],
+        additional_targets={"mask": "mask"},
     )
 
-    label_transform = transforms.Compose(
-        [
-            transforms.Resize((args.train_h, args.train_w), Image.NEAREST),
-            ext_transforms.PILToLongTensor(),
-        ]
-    )
+    train_data = dataset(args.data_root, mode="train", transforms=base_transforms)
     print(
         f"Image de dimension {args.train_h} pour height et {args.train_w} pour width "
     )
-    train_data = dataset(
-        args.data_root, transform=image_transform, label_transform=label_transform
-    )
 
     if args.transformation:
+        # Transformations augmentées
+        augmented_transforms = A.Compose(
+            [
+                A.Resize(height=args.train_h, width=args.train_w),
+                A.HorizontalFlip(p=0.5),
+                A.VerticalFlip(p=0.5),
+                A.RandomRotate90(p=0.5),
+                A.ShiftScaleRotate(
+                    shift_limit=0.0625, scale_limit=0.2, rotate_limit=10, p=0.5
+                ),
+                A.OneOf(
+                    [
+                        A.RandomBrightnessContrast(p=0.5),
+                        A.RandomGamma(p=0.5),
+                        A.CLAHE(p=0.5),
+                    ],
+                    p=0.5,
+                ),
+                A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                ToTensorV2(),
+            ],
+            additional_targets={"mask": "mask"},
+        )
+
         augmented_dataset = dataset(
             args.data_root,
             mode="train",
-            transform=image_transform,
-            label_transform=label_transform,
+            transforms=augmented_transforms,
             transfo_activated=True,
         )
+
+        # Concaténer les deux datasets
         train_data = torch.utils.data.ConcatDataset([train_data, augmented_dataset])
 
     train_loader = torch.utils.data.DataLoader(
@@ -265,7 +286,7 @@ def main_worker(gpu, ngpus_per_node, argss):
     elif args.optimizer == "AdamW":
         optimizer = torch.optim.AdamW(
             params_list,
-            lr=args.base_lr,  # 0.00001 avec 0 de weight decay fonctionne bien
+            lr=args.base_lr,  # 0.00001 avec 0 de weight decay fonctionne "bien"
             weight_decay=args.weight_decay,
             betas=(0.9, 0.999),  # avec AdamW, pas de momentum -> betas
         )
@@ -338,12 +359,7 @@ def main_worker(gpu, ngpus_per_node, argss):
                 ext_transforms.PILToLongTensor(),
             ]
         )
-        val_data = dataset(
-            args.data_root,
-            mode="val",
-            transform=image_transform,
-            label_transform=label_transform,
-        )
+        val_data = dataset(args.data_root, mode="val", transforms=base_transforms)
         val_loader = torch.utils.data.DataLoader(
             val_data,
             batch_size=args.batch_size_val,
