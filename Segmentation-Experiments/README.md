@@ -94,10 +94,11 @@ Voilà ce à quoi doit ressembler l'arborescence du projet, sans compter les dif
 - Pour changer de modèle à utiliser (en tout cas ResNet), il faut modifier le nombre de layers dans le fichier YAML, pour correspondre au modèle ResNet correspondant (101,152, etc.), et dans la partie test du fichier YAML modifier model_path en mettant le nom de l'architecture utilisée pour garder des traces et ne pas enregistrer par dessus un modèle existant qui serait tout à fait différent.
 - L'entrainement utilise le poly_learning_rate, défini dans util/util.py (était déjà dans le code préexistant).
 - La classe vehicle, avec pool, est celle qui semble poser le plus problème, quel que soit le modèle utilisé.
+- Pour avoir des résultats sous forme d'image (qui iront dans le dossier outputs), mettre `mode` à vis dans le YAML, et `imshow_batch` à True. Pour avoir des résultats numériques (qui iront dans results_saved/numeric_results/), mettre `mode` à test, et `imshow_batch` à False.
 
 
 ## 7. Pistes d'exploration
 
-- augmenter decoder_d_model à 512 ou 768
+- Augmenter decoder_d_model à 512 ou 768
 - AdamW plutôt que SGD pour les transformer
-- learning rate plus haut uniquement pour le decoder
+- Learning rate plus haut uniquement pour le decoder
