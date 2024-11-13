@@ -9,14 +9,18 @@ import os
 from collections import OrderedDict
 import torch.utils.data as data
 from . import utils
+import cv2
 
 # @ sh:add
 from PIL import Image, ImageOps, ImageFilter
 from torchvision import transforms
 import numpy as np
+import torch
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
 
 
-class RescueNet(data.Dataset):
+class RescueNet(data.Dataset):  # modifié (pour pouvoir utiliser albumentations)
     """RescueNet-v2.0 dataset: ....
 
     Keyword arguments:
@@ -77,18 +81,17 @@ class RescueNet(data.Dataset):
         self,
         root_dir,
         mode="train",
-        transform=None,
-        label_transform=None,
+        transforms=None,
+        transfo_activated=False,
         loader=utils.pil_loader,
     ):
         self.root_dir = root_dir
         self.mode = mode
-        self.transform = transform
-        self.label_transform = label_transform
+        self.transforms = transforms
         self.loader = loader
         self.mean = [0.485, 0.456, 0.406]
         self.std = [0.229, 0.224, 0.225]
-        self.normalize = transforms.Normalize(self.mean, self.std)
+        self.transfo_activated = transfo_activated
 
         if self.mode.lower() == "train":
             # Get the training data and labels filepaths
@@ -163,15 +166,21 @@ class RescueNet(data.Dataset):
 
         if self.mode == "vis":
             img = Image.open(self.test_data[index]).convert("RGB")
-            if self.transform is not None:
-                img = self.transform(img)
-            return self.normalize(img), os.path.basename(self.test_data[index])
+            img = np.array(img)
+            if self.transforms is not None:
+                transformed = self.transforms(image=img)
+                img = transformed["image"]
+            return img, os.path.basename(self.test_data[index])
 
         if self.mode.lower() == "train":
             data_path, label_path = self.train_data[index], self.train_labels[index]
+
         elif self.mode.lower() == "val":
             data_path, label_path = self.val_data[index], self.val_labels[index]
+            self.albumentations_transform = None
+
         elif self.mode.lower() == "test":
+            self.albumentations_transform = None
             data_path, label_path = self.test_data[index], self.test_labels[index]
         else:
             raise RuntimeError(
@@ -180,16 +189,24 @@ class RescueNet(data.Dataset):
 
         img, label = self.loader(data_path, label_path)
 
+        img = np.array(img)
+        label = np.array(label)
+
         # Remap class labels
         label = utils.remap(label, self.full_classes, self.new_classes)
 
-        if self.transform is not None:
-            img = self.transform(img)
+        # Convertir explicitement en uint8
+        label = label.astype(np.uint8)
 
-        if self.label_transform is not None:
-            label = self.label_transform(label)
+        if self.transforms is not None:
+            transformed = self.transforms(image=img, mask=label)
+            img = transformed["image"]
+            label = transformed["mask"]
 
-        return self.normalize(img), label
+        label = torch.as_tensor(label, dtype=torch.long)
+        # pour éviter RuntimeError: expected scalar type Long but found Byte
+
+        return img, label
 
     def __len__(self):
         """Returns the length of the dataset."""

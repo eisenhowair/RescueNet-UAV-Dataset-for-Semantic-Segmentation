@@ -52,7 +52,7 @@ def get_files(folder, name_filter=None, extension_filter=None):
     return filtered_files
 
 
-def pil_loader(data_path, label_path):
+def pil_loader(data_path, label_path):  # modifié (rajouté le convert à la fin)
     """Loads a sample and label image given their path as PIL images.
 
     Keyword arguments:
@@ -62,13 +62,13 @@ def pil_loader(data_path, label_path):
     Returns the image and the label as PIL images.
 
     """
-    data = Image.open(data_path)
-    label = Image.open(label_path)
+    data = Image.open(data_path).convert("RGB")
+    label = Image.open(label_path).convert("L")
 
     return data, label
 
 
-def remap(image, old_values, new_values):
+def remap(image, old_values, new_values):  # modifié
     assert isinstance(image, Image.Image) or isinstance(
         image, np.ndarray
     ), "image must be of type PIL.Image or numpy.ndarray"
@@ -90,7 +90,7 @@ def remap(image, old_values, new_values):
         if new != 0:
             tmp[image == old] = new
 
-    return Image.fromarray(tmp)
+    return tmp
 
 
 def enet_weighing(dataloader, num_classes, c=1.02):
@@ -154,7 +154,7 @@ def median_freq_balancing(dataloader, num_classes):
     """
     class_count = 0
     total = 0
-    for _, label in dataloader:
+    for _, label in tqdm(dataloader, desc="Calculating class distribution"):
         label = label.cpu().numpy()
 
         # Flatten label
@@ -177,5 +177,6 @@ def median_freq_balancing(dataloader, num_classes):
     # Compute the frequency and its median
     freq = class_count / total
     med = np.median(freq)
+    class_weights = med / freq
 
-    return med / freq
+    return torch.from_numpy(class_weights).float()
