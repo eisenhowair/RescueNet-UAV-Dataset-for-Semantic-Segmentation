@@ -1,0 +1,5 @@
+  tensorboardX
+  timm==1.0.9
+  einops
+  albumentations==1.4.21
+# those are specific requirements that are required. Other (obvious) packages such as tensorflow are not mentioned
