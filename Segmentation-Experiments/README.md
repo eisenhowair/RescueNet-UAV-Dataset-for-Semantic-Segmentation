@@ -19,6 +19,7 @@ This repo is mainly built based on [Official PSPNet](https://github.com/hszhao/s
   - `tensorboardX`
   - `timm==1.0.9` (1.10.0, soit la version actuelle, va poser problème)
   - `einops`
+  - `albumentations` (1.4.21 à l'époque de création du code)
 
 ## 2. Télécharger et configurer les modèles
 
