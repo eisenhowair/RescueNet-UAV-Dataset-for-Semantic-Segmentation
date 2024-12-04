@@ -27,7 +27,7 @@ TRAIN:
   class_weights: True
   weight_function: median
   use_pretrained_weights: True # to indicate whether the model will use pre-trained weights or not
-  transformation: True # ne fonctionne pas (laisser à False)
+  transformation: True # indique si les transformations Albumentations doivent être utilisées ou non dans train.py
   dataset: rescuenet # @sh : new param
   sync_bn: True  # adopt syncbn or not
   train_h: 288 #241 #713 #1024 doit être divisble par patch_size pour transformr
